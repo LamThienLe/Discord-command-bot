@@ -104,6 +104,8 @@ class CommandHelpBot(commands.Bot):
         try:
             if self.settings.discord_guild_id:
                 guild_obj = discord.Object(id=self.settings.discord_guild_id)
+                # Copy global app commands (from hybrid commands) to the guild for instant availability
+                self.tree.copy_global_to(guild=guild_obj)
                 await self.tree.sync(guild=guild_obj)
                 logger.info("Slash commands synced to guild %s", self.settings.discord_guild_id)
             else:
