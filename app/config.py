@@ -10,11 +10,6 @@ class Settings:
     """Simple settings loader backed by environment variables."""
 
     def __init__(self) -> None:
-        # WhatsApp (legacy, can be removed if not needed)
-        self.whatsapp_token: str | None = os.getenv("WHATSAPP_TOKEN")
-        self.whatsapp_phone_id: str | None = os.getenv("WHATSAPP_PHONE_ID")
-        self.graph_api_version: str = os.getenv("GRAPH_API_VERSION", "v21.0")
-
         # Discord bot configuration
         self.discord_bot_token: str | None = os.getenv("DISCORD_BOT_TOKEN")
         self.discord_command_prefix: str = os.getenv("DISCORD_COMMAND_PREFIX", "!")
@@ -36,7 +31,7 @@ class Settings:
         )
         self.firecrawl_base_url: str = os.getenv("FIRECRAWL_BASE_URL", "https://api.firecrawl.dev")
 
-        # Optional: used for WhatsApp webhook verification (GET /webhook)
+        # Reserved for future webhook verification tokens
         self.verify_token: str | None = os.getenv("VERIFY_TOKEN")
 
         # App settings

@@ -114,8 +114,7 @@ app/
 ├── config.py           # Configuration management
 ├── cache.py            # Command cache
 ├── firecrawl.py        # FireCrawl API client
-├── agent.py            # OpenAI integration
-└── whatsapp.py         # Legacy WhatsApp code (can be removed)
+└── agent.py            # OpenAI integration
 
 requirements.txt         # Python dependencies
 discord_env_example.txt  # Environment variables template
