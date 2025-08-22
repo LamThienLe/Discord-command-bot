@@ -97,6 +97,14 @@ Once the bot is running and invited to your server:
 /help git status
 ```
 
+You can also create calendar events (placeholder OAuth required):
+
+```
+/event "tomorrow 3pm for 1h Team sync"
+```
+
+Note: Google account connection is required for event creation once OAuth is implemented. Use `/connect_google` (placeholder for now).
+
 ## How It Works
 
 1. **Cache Check**: First checks if the query matches a known command

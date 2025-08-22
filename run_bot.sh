@@ -6,7 +6,7 @@ echo "Command Help Bot - Discord Version"
 echo "=================================="
 
 # Check if virtual environment exists
-if [ ! -d "venv" ]; then
+if [ ! -d ".venv" ]; then
     echo "Creating virtual environment..."
     python -m venv venv
 fi

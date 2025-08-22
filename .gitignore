@@ -33,5 +33,9 @@ htmlcov/
 .env
 .env.*
 
+# Local Google OAuth creds/tokens (do not commit secrets)
+credentials.json
+app/tokens/
+
 # Logs
 *.log
