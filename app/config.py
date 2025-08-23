@@ -30,13 +30,10 @@ class Settings:
             raw_firecrawl_key.strip() if isinstance(raw_firecrawl_key, str) else None
         )
         self.firecrawl_base_url: str = os.getenv("FIRECRAWL_BASE_URL", "https://api.firecrawl.dev")
-
-        # Reserved for future webhook verification tokens
-        self.verify_token: str | None = os.getenv("VERIFY_TOKEN")
-
+        
         # App settings
         self.debug: bool = os.getenv("DEBUG", "false").lower() in {"1", "true", "yes"}
-        self.default_timezone: str = os.getenv("DEFAULT_TIMEZONE", "UTC")
+        self.default_timezone: str = os.getenv("DEFAULT_TIMEZONE", "Asia/Ho_Chi_Minh")
 
 
 @lru_cache(maxsize=1)

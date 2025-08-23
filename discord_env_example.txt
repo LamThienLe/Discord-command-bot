@@ -1,0 +1,22 @@
+# Discord Bot Configuration
+DISCORD_BOT_TOKEN=your_discord_bot_token_here
+DISCORD_COMMAND_PREFIX=!
+DISCORD_GUILD_ID=123456789012345678
+
+# OpenAI (optional - for AI responses)
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Ollama (local LLM - optional)
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=mistral-nemo
+
+# FireCrawl (optional - for documentation fetching)
+FIRECRAWL_API_KEY=your_firecrawl_api_key_here
+FIRECRAWL_BASE_URL=https://api.firecrawl.dev
+
+# App Settings
+DEBUG=false
+DEFAULT_TIMEZONE=Asia/Ho_Chi_Minh
+
+# Reserved for future webhook verification
+VERIFY_TOKEN=
