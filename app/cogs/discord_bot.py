@@ -12,6 +12,7 @@ from ..config import get_settings
 from ..cache import get_cached_answer
 from ..agents.help_agent import answer_help_query
 from ..agents.calendar_agent import parse_times_and_summary, contains_time
+from ..agents.specialists import PersonalSpecialist, CommandSpecialist
 from ..user_settings import get_user_timezone, set_user_timezone
 from ..google_oauth import get_user_credentials
 from ..tools.google_calendar import GoogleCalendarClient
@@ -59,6 +60,8 @@ class HelpCog(commands.Cog):
 class CalendarCog(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
+        self.personal = PersonalSpecialist()
+        self.command = CommandSpecialist()
 
     @commands.hybrid_command(name="event", description="Create a calendar event from natural language")
     async def event(self, ctx: commands.Context, *, details: str) -> None:
@@ -112,6 +115,60 @@ class CalendarCog(commands.Cog):
         except Exception as e:
             await (ctx.interaction.followup.send(f"Sorry, couldn’t create the event: {e}")
                    if getattr(ctx, "interaction", None) else ctx.reply(f"Sorry, couldn’t create the event: {e}"))
+
+
+    @commands.hybrid_command(name="ask_personal", description="Ask personal assistant to schedule or plan.")
+    async def ask_personal(self, ctx: commands.Context, *, text: str) -> None:
+        if getattr(ctx, "interaction", None):
+            await ctx.interaction.response.defer()
+        else:
+            await ctx.defer()
+
+        settings = get_settings()
+        user_tz = get_user_timezone(ctx.author.id) or settings.default_timezone or "Asia/Ho_Chi_Minh"
+        msg = await self.personal.act(text, {"user_id": ctx.author.id, "user_tz": user_tz})
+
+        # Follow-up path if time missing
+        if msg.startswith("What time should I schedule"):
+            await (ctx.interaction.followup.send(msg) if getattr(ctx, "interaction", None) else ctx.reply(msg))
+            def _check(m: discord.Message) -> bool:
+                return m.author.id == ctx.author.id and m.channel.id == ctx.channel.id
+            try:
+                reply: discord.Message = await self.bot.wait_for("message", check=_check, timeout=60)
+            except Exception:
+                out = "Timed out waiting for a time. Please try again."
+                await (ctx.interaction.followup.send(out) if getattr(ctx, "interaction", None) else ctx.reply(out))
+                return
+            msg = await self.personal.act(f"{text} at {reply.content}", {"user_id": ctx.author.id, "user_tz": user_tz})
+
+        await (ctx.interaction.followup.send(msg) if getattr(ctx, "interaction", None) else ctx.reply(msg))
+
+
+    @commands.hybrid_command(name="ask_command", description="Ask about a command using docs.")
+    async def ask_command(self, ctx: commands.Context, *, query: str) -> None:
+        if getattr(ctx, "interaction", None):
+            await ctx.interaction.response.defer()
+        else:
+            await ctx.defer()
+
+        text = await self.command.act(query, {})
+        if text:
+            content, sources = text, []
+        else:
+            # Fallback to existing help path
+            content, source_urls = await answer_help_query(query)
+            sources = source_urls[:3]
+
+        embed = discord.Embed(
+            title=f"Help: {query}",
+            description=content,
+            color=discord.Color.green(),
+            timestamp=discord.utils.utcnow(),
+        )
+        if sources:
+            embed.set_footer(text=f"Sources: {', '.join(sources)}")
+        await (ctx.interaction.followup.send(embed=embed) if getattr(ctx, "interaction", None) else ctx.reply(embed=embed))
+
 
     @commands.hybrid_command(name="set_timezone", description="Set your timezone, e.g. Asia/Ho_Chi_Minh")
     async def set_timezone(self, ctx: commands.Context, *, tz: str) -> None:

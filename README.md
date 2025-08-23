@@ -105,6 +105,54 @@ You can also create calendar events (placeholder OAuth required):
 
 Note: Google account connection is required for event creation once OAuth is implemented. Use `/connect_google` (placeholder for now).
 
+## MCP quick start
+
+Minimal MCP integration powers two new tools and commands.
+
+### Install and run
+
+```bash
+pip install -r requirements.txt
+python -m app.mcp.server  # starts stdio server
+```
+
+Set feature flags in `.env`:
+
+```bash
+USE_MCP=true   # toggle MCP on/off (fallback keeps old behavior)
+DRY_RUN=false  # when true, specialists print intended calls without side effects
+```
+
+Run the bot:
+
+```bash
+python -m app.main
+```
+
+### New commands
+
+- `/ask_personal <text>`: parses time (default timezone `Asia/Ho_Chi_Minh`), creates a Google Calendar event via MCP `create_event`. If no time found, it asks for one, then proceeds. With `USE_MCP=false`, it falls back to the existing direct Google Calendar client.
+- `/ask_command <query>`: answers using MCP `search_docs` and shows 1–3 sources. Falls back to the existing help flow if MCP is off or fails.
+
+### Dry run
+
+Set `DRY_RUN=true` to preview calls:
+
+```
+/ask_personal team sync tomorrow 3pm for 45m
+→ DRY_RUN create_event {"user_id": 123, "summary": "Team Sync", "start_iso": "...", "end_iso": "..."}
+
+/ask_command how to use curl PUT
+→ DRY_RUN search_docs {"query": "how to use curl PUT"}
+```
+
+### Tools
+
+- `create_event(user_id:int, summary:str, start_iso:str, end_iso:str) -> str`
+- `search_docs(query:str) -> {content:str, sources:list[str]}`
+
+Errors are concise and actionable (e.g., missing Google credentials).
+
 ## How It Works
 
 1. **Cache Check**: First checks if the query matches a known command
