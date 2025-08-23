@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 from ..config import get_settings
 from ..cache import get_cached_answer
 from ..agents.help_agent import answer_help_query
-from ..agents.calendar_agent import parse_times_and_summary
+from ..agents.calendar_agent import parse_times_and_summary, contains_time
 from ..user_settings import get_user_timezone, set_user_timezone
 from ..google_oauth import get_user_credentials
 from ..tools.google_calendar import GoogleCalendarClient
@@ -81,6 +81,23 @@ class CalendarCog(commands.Cog):
             tz2 = gcal.get_user_timezone()
             if isinstance(tz2, str) and tz2:
                 user_tz = tz2
+
+        # Ask back if no explicit time is present to avoid creating events at arbitrary defaults
+        if not contains_time(details):
+            prompt = "What time should I schedule it? (e.g., 10:30am or 15:30)"
+            await (ctx.interaction.followup.send(prompt) if getattr(ctx, "interaction", None) else ctx.reply(prompt))
+
+            def _check(m: discord.Message) -> bool:
+                return m.author.id == ctx.author.id and m.channel.id == ctx.channel.id
+
+            try:
+                reply: discord.Message = await self.bot.wait_for("message", check=_check, timeout=60)
+            except Exception:
+                msg = "Timed out waiting for a time. Please try `/event` again with a time."
+                await (ctx.interaction.followup.send(msg) if getattr(ctx, "interaction", None) else ctx.reply(msg))
+                return
+
+            details = f"{details} at {reply.content}"
 
         start, end, summary = await parse_times_and_summary(details, user_tz)
         if start is None or end is None:

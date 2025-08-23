@@ -24,6 +24,7 @@ class Settings:
         self.ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
         self.ollama_model: str = os.getenv("OLLAMA_MODEL", "mistral-nemo")
 
+        ### COMMAND HELP BOT ###
         # FireCrawl
         raw_firecrawl_key = os.getenv("FIRECRAWL_API_KEY")
         self.firecrawl_api_key: str | None = (
@@ -31,6 +32,7 @@ class Settings:
         )
         self.firecrawl_base_url: str = os.getenv("FIRECRAWL_BASE_URL", "https://api.firecrawl.dev")
         
+        ### GOOGLE CALENDAR BOT ###
         # App settings
         self.debug: bool = os.getenv("DEBUG", "false").lower() in {"1", "true", "yes"}
         self.default_timezone: str = os.getenv("DEFAULT_TIMEZONE", "Asia/Ho_Chi_Minh")
