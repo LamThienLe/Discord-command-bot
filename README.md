@@ -57,18 +57,19 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 5. Run the Bot
+### 5. Run the MCP server
 
 ```bash
-python -m app.main
+python -m app.mcp.server
 ```
 
-Or use the convenient run script:
+### 6. Run the Bot
+
 ```bash
-./run_bot.sh  # On Windows: run_bot.bat
+USE_MCP=true python -m app.main
 ```
 
-### 6. Invite Bot to Your Server
+### 7. Invite Bot to Your Server
 
 1. In Discord Developer Portal, go to "OAuth2" → "URL Generator"
 2. Select "bot" scope
@@ -100,14 +101,14 @@ Once the bot is running and invited to your server:
 You can also create calendar events (placeholder OAuth required):
 
 ```
-/event "tomorrow 3pm for 1h Team sync"
+/ask_personal "tomorrow 3pm for 1h Team sync"
 ```
 
 Note: Google account connection is required for event creation once OAuth is implemented. Use `/connect_google` (placeholder for now).
 
 ## MCP quick start
 
-Minimal MCP integration powers two new tools and commands.
+Minimal MCP integration powers two tools and unified commands.
 
 ### Install and run
 
@@ -119,20 +120,20 @@ python -m app.mcp.server  # starts stdio server
 Set feature flags in `.env`:
 
 ```bash
-USE_MCP=true   # toggle MCP on/off (fallback keeps old behavior)
+USE_MCP=true   # enable MCP (required for specialists)
 DRY_RUN=false  # when true, specialists print intended calls without side effects
 ```
 
 Run the bot:
 
 ```bash
-python -m app.main
+USE_MCP=true python -m app.main
 ```
 
-### New commands
+### Commands
 
-- `/ask_personal <text>`: parses time (default timezone `Asia/Ho_Chi_Minh`), creates a Google Calendar event via MCP `create_event`. If no time found, it asks for one, then proceeds. With `USE_MCP=false`, it falls back to the existing direct Google Calendar client.
-- `/ask_command <query>`: answers using MCP `search_docs` and shows 1–3 sources. Falls back to the existing help flow if MCP is off or fails.
+- `/help <query>`: uses CommandSpecialist via MCP `search_docs` to answer, with sources.
+- `/ask_personal <text>`: parses time (default timezone `Asia/Ho_Chi_Minh`), creates a Google Calendar event via MCP `create_event`. If no time found, it asks for one.
 
 ### Dry run
 
@@ -142,16 +143,16 @@ Set `DRY_RUN=true` to preview calls:
 /ask_personal team sync tomorrow 3pm for 45m
 → DRY_RUN create_event {"user_id": 123, "summary": "Team Sync", "start_iso": "...", "end_iso": "..."}
 
-/ask_command how to use curl PUT
+/help how to use curl PUT
 → DRY_RUN search_docs {"query": "how to use curl PUT"}
 ```
 
-### Tools
+### Tools (MCP)
 
 - `create_event(user_id:int, summary:str, start_iso:str, end_iso:str) -> str`
 - `search_docs(query:str) -> {content:str, sources:list[str]}`
 
-Errors are concise and actionable (e.g., missing Google credentials).
+Errors are concise and actionable (e.g., missing Google credentials). MCP server enforces per-specialist tool allowlists.
 
 ## How It Works
 

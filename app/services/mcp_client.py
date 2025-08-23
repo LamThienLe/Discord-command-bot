@@ -77,7 +77,7 @@ class MCPClient:
             k: (v if isinstance(v, (int, float, bool)) else (str(v)[:64] if isinstance(v, str) else type(v).__name__))
             for k, v in params.items()
         }
-        self._logger.info("tool_call_start", extra={"tool_name": name, "args": args_summary})
+        self._logger.info("tool_call_start", extra={"tool_name": name, "tool_args": args_summary})
         try:
             t0 = time.time()
             result = await _rpc_call(self._proc, "tools/call", {"name": name, "arguments": params})

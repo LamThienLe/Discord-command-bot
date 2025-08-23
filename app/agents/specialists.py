@@ -6,10 +6,8 @@ import os
 from dataclasses import dataclass, field
 from typing import Any, Dict, Set
 
-from .calendar_agent import parse_times_and_summary, contains_time
+from ..utils.timeparse import parse_times_and_summary, contains_time
 from ..services.mcp_client import get_mcp_client, NotUsingMCPError
-from ..tools.google_calendar import GoogleCalendarClient
-from ..google_oauth import get_user_credentials
 
 
 def _env_bool(name: str, default: bool = False) -> bool:
@@ -51,7 +49,7 @@ class PersonalSpecialist(Specialist):
         if not contains_time(input):
             return "What time should I schedule it? (e.g., 10:30 or 3pm)"
 
-        start, end, summary = await parse_times_and_summary(input, user_tz)
+        start, end, summary = parse_times_and_summary(input, user_tz)
         if start is None or end is None:
             return "I couldn’t parse a time. Try: 'tomorrow 3pm for 45m Team sync'"
 
@@ -66,11 +64,7 @@ class PersonalSpecialist(Specialist):
             )
             return f"Event created: {link}"
         except NotUsingMCPError:
-            creds = get_user_credentials(user_id)
-            if not creds:
-                return "Missing Google credentials. Use /connect_google."
-            link = GoogleCalendarClient(creds).create_event(summary=summary, start=start, end=end)
-            return f"Event created: {link}"
+            return "MCP disabled. Set USE_MCP=true and run the MCP server."
         except Exception as e:
             return f"Failed to create event: {e}"
 

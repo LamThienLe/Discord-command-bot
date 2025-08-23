@@ -9,9 +9,6 @@ from discord.ext import commands
 from zoneinfo import ZoneInfo
 
 from ..config import get_settings
-from ..cache import get_cached_answer
-from ..agents.help_agent import answer_help_query
-from ..agents.calendar_agent import parse_times_and_summary, contains_time
 from ..agents.specialists import PersonalSpecialist, CommandSpecialist
 from ..user_settings import get_user_timezone, set_user_timezone
 from ..google_oauth import get_user_credentials
@@ -24,6 +21,7 @@ logger = logging.getLogger(__name__)
 class HelpCog(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
+        self.command = CommandSpecialist()
 
     @commands.hybrid_command(name="help", description="Get help with a command or tool")
     async def help_command(self, ctx: commands.Context, *, query: str) -> None:
@@ -33,20 +31,17 @@ class HelpCog(commands.Cog):
             await ctx.defer()
 
         try:
-            cached_answer = get_cached_answer(query)
-            if cached_answer:
-                content, footer_source = cached_answer, "Cache"
-            else:
-                content, sources = await answer_help_query(query)
-                footer_source = f"Sources: {', '.join(sources[:3])}" if sources else "AI Generated"
-
+            text = await self.command.act(query, {})
+            if not text:
+                text = "No answer available. Ensure MCP server is running (USE_MCP=true)."
+            # Discord embed description limit is 4096 chars
+            description = text if len(text) <= 4096 else (text[:4000] + "\n\n… truncated …")
             embed = discord.Embed(
                 title=f"Help: {query}",
-                description=content,
+                description=description,
                 color=discord.Color.blue(),
                 timestamp=discord.utils.utcnow(),
             )
-            embed.set_footer(text=f"Source: {footer_source} | Powered by AI")
             if getattr(ctx, "interaction", None):
                 await ctx.interaction.followup.send(embed=embed)
             else:
@@ -61,60 +56,6 @@ class CalendarCog(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.personal = PersonalSpecialist()
-        self.command = CommandSpecialist()
-
-    @commands.hybrid_command(name="event", description="Create a calendar event from natural language")
-    async def event(self, ctx: commands.Context, *, details: str) -> None:
-        if getattr(ctx, "interaction", None):
-            await ctx.interaction.response.defer()
-        else:
-            await ctx.defer()
-
-        creds = get_user_credentials(ctx.author.id)
-        if not creds:
-            await (ctx.interaction.followup.send("Please connect Google first with `/connect_google`.")
-                   if getattr(ctx, "interaction", None) else ctx.reply("Please connect Google first with `/connect_google`."))
-            return
-
-        settings = get_settings()
-        user_tz = get_user_timezone(ctx.author.id) or settings.default_timezone or "UTC"
-
-        gcal = GoogleCalendarClient(creds)
-        if user_tz == "UTC":
-            tz2 = gcal.get_user_timezone()
-            if isinstance(tz2, str) and tz2:
-                user_tz = tz2
-
-        # Ask back if no explicit time is present to avoid creating events at arbitrary defaults
-        if not contains_time(details):
-            prompt = "What time should I schedule it? (e.g., 10:30am or 15:30)"
-            await (ctx.interaction.followup.send(prompt) if getattr(ctx, "interaction", None) else ctx.reply(prompt))
-
-            def _check(m: discord.Message) -> bool:
-                return m.author.id == ctx.author.id and m.channel.id == ctx.channel.id
-
-            try:
-                reply: discord.Message = await self.bot.wait_for("message", check=_check, timeout=60)
-            except Exception:
-                msg = "Timed out waiting for a time. Please try `/event` again with a time."
-                await (ctx.interaction.followup.send(msg) if getattr(ctx, "interaction", None) else ctx.reply(msg))
-                return
-
-            details = f"{details} at {reply.content}"
-
-        start, end, summary = await parse_times_and_summary(details, user_tz)
-        if start is None or end is None:
-            msg = "I couldn’t parse the time. Try: 'tomorrow 3pm for 1h Team sync'"
-            await (ctx.interaction.followup.send(msg) if getattr(ctx, "interaction", None) else ctx.reply(msg))
-            return
-
-        try:
-            link = gcal.create_event(summary=summary, start=start, end=end)
-            await (ctx.interaction.followup.send(f"Event created: {link}")
-                   if getattr(ctx, "interaction", None) else ctx.reply(f"Event created: {link}"))
-        except Exception as e:
-            await (ctx.interaction.followup.send(f"Sorry, couldn’t create the event: {e}")
-                   if getattr(ctx, "interaction", None) else ctx.reply(f"Sorry, couldn’t create the event: {e}"))
 
 
     @commands.hybrid_command(name="ask_personal", description="Ask personal assistant to schedule or plan.")
@@ -144,30 +85,7 @@ class CalendarCog(commands.Cog):
         await (ctx.interaction.followup.send(msg) if getattr(ctx, "interaction", None) else ctx.reply(msg))
 
 
-    @commands.hybrid_command(name="ask_command", description="Ask about a command using docs.")
-    async def ask_command(self, ctx: commands.Context, *, query: str) -> None:
-        if getattr(ctx, "interaction", None):
-            await ctx.interaction.response.defer()
-        else:
-            await ctx.defer()
-
-        text = await self.command.act(query, {})
-        if text:
-            content, sources = text, []
-        else:
-            # Fallback to existing help path
-            content, source_urls = await answer_help_query(query)
-            sources = source_urls[:3]
-
-        embed = discord.Embed(
-            title=f"Help: {query}",
-            description=content,
-            color=discord.Color.green(),
-            timestamp=discord.utils.utcnow(),
-        )
-        if sources:
-            embed.set_footer(text=f"Sources: {', '.join(sources)}")
-        await (ctx.interaction.followup.send(embed=embed) if getattr(ctx, "interaction", None) else ctx.reply(embed=embed))
+    # Removed /ask_command; use /help instead which routes to CommandSpecialist
 
 
     @commands.hybrid_command(name="set_timezone", description="Set your timezone, e.g. Asia/Ho_Chi_Minh")
