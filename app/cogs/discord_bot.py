@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
-import datetime as dt
+from typing import Any
 
 import discord
 from discord.ext import commands
@@ -11,8 +10,6 @@ from zoneinfo import ZoneInfo
 from ..config import get_settings
 from ..agents.specialists import PersonalSpecialist, CommandSpecialist
 from ..user_settings import get_user_timezone, set_user_timezone
-from ..google_oauth import get_user_credentials
-from ..tools.google_calendar import GoogleCalendarClient
 
 
 logger = logging.getLogger(__name__)

@@ -156,10 +156,9 @@ Errors are concise and actionable (e.g., missing Google credentials). MCP server
 
 ## How It Works
 
-1. **Cache Check**: First checks if the query matches a known command
-2. **Documentation Fetching**: If not cached, uses FireCrawl to fetch relevant docs
-3. **AI Generation**: Sends the query and context to OpenAI for a structured response
-4. **Discord Response**: Formats the response as a rich Discord embed
+1. **Docs Fetching**: uses FireCrawl to fetch relevant docs for the query
+2. **Synthesis**: MCP server synthesizes a concise answer (or extracts snippets)
+3. **Discord Response**: Bot formats the response as an embed with sources
 
 ## File Structure
 
@@ -169,9 +168,9 @@ app/
 ├── main.py              # Bot entry point
 ├── discord_bot.py       # Discord bot logic
 ├── config.py           # Configuration management
-├── cache.py            # Command cache
-├── firecrawl.py        # FireCrawl API client
-└── agent.py            # OpenAI integration
+├── tools/firecrawl_client.py  # FireCrawl API client
+├── services/context.py        # Context aggregation
+└── services/llm.py            # Local LLM (Ollama) helper
 
 requirements.txt         # Python dependencies
 discord_env_example.txt  # Environment variables template
