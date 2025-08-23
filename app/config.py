@@ -36,6 +36,7 @@ class Settings:
 
         # App settings
         self.debug: bool = os.getenv("DEBUG", "false").lower() in {"1", "true", "yes"}
+        self.default_timezone: str = os.getenv("DEFAULT_TIMEZONE", "UTC")
 
 
 @lru_cache(maxsize=1)

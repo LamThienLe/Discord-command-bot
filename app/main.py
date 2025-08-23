@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import sys
 
-from .discord_bot import run_discord_bot
+from .cogs.discord_bot import run_discord_bot
 
 
 logging.basicConfig(
