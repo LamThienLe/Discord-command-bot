@@ -4,6 +4,7 @@ import datetime as dt
 import json
 import os
 from dataclasses import dataclass, field
+import logging
 from typing import Any, Dict, Set
 
 from ..utils.timeparse import parse_times_and_summary, contains_time
@@ -41,6 +42,7 @@ class Specialist:
 class PersonalSpecialist(Specialist):
     def __init__(self) -> None:
         super().__init__(name="personal", allowed_tools={"create_event"})
+        self._logger = logging.getLogger(__name__)
 
     async def act(self, input: str, ctx: Dict[str, Any]) -> str:
         user_id: int = int(ctx["user_id"])  # required
@@ -53,15 +55,19 @@ class PersonalSpecialist(Specialist):
         if start is None or end is None:
             return "I couldn’t parse a time. Try: 'tomorrow 3pm for 45m Team sync'"
 
+        # Prepare payload and log it regardless of DRY_RUN so we can observe real requests
+        payload = {"user_id": user_id, "summary": summary, "start_iso": _to_iso(start), "end_iso": _to_iso(end)}
+        try:
+            # Include JSON directly in the message so default formatter prints it
+            self._logger.info(f"tool_request create_event {json.dumps(payload)}")
+        except Exception:
+            pass
+
         if _env_bool("DRY_RUN", False):
-            payload = {"user_id": user_id, "summary": summary, "start_iso": _to_iso(start), "end_iso": _to_iso(end)}
             return f"DRY_RUN create_event {json.dumps(payload)}"
 
         try:
-            link = await self._invoke_allowed(
-                "create_event",
-                {"user_id": user_id, "summary": summary, "start_iso": _to_iso(start), "end_iso": _to_iso(end)},
-            )
+            link = await self._invoke_allowed("create_event", payload)
             return f"Event created: {link}"
         except NotUsingMCPError:
             return "MCP disabled. Set USE_MCP=true and run the MCP server."

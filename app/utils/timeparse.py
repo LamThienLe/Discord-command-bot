@@ -43,6 +43,19 @@ def _fallback_parse(details: str, user_tz: str) -> Tuple[Optional[dt.datetime], 
     duration_minutes = _extract_duration_minutes(details)
     cleaned = _DURATION_RE.sub(" ", details)
 
+    # If there's a trailing "for <words>" that is NOT a duration (e.g., "for Post Rowing"),
+    # strip it before parsing to avoid confusing the date parser.
+    if duration_minutes is None:
+        cleaned = re.sub(
+            r"\bfor\b(?!\s+\d+(?:\.\d+)?\s*(?:hours?|hrs?|h|minutes?|mins?|m))[\s,.:;-]*.*$",
+            " ",
+            cleaned,
+            flags=re.IGNORECASE,
+        )
+
+    # Capture explicit clock time if present so we can enforce it after date parsing
+    explicit_time = _extract_time_components(cleaned)
+
     if not contains_time(cleaned):
         return None, None
 
@@ -56,7 +69,15 @@ def _fallback_parse(details: str, user_tz: str) -> Tuple[Optional[dt.datetime], 
             when = None
     if not when:
         return None, None
-    start = when if when.tzinfo else when.replace(tzinfo=ZoneInfo(user_tz))
+    # Ensure timezone awareness
+    tzinfo = ZoneInfo(user_tz)
+    start = when if when.tzinfo else when.replace(tzinfo=tzinfo)
+
+    # If the user specified an explicit time like 8am/20:30, enforce it
+    if explicit_time is not None:
+        hour, minute = explicit_time
+        base_local = start.astimezone(tzinfo)
+        start = base_local.replace(hour=hour, minute=minute, second=0, microsecond=0)
     minutes = duration_minutes if isinstance(duration_minutes, int) else 60
     end = start + dt.timedelta(minutes=minutes)
     return start, end

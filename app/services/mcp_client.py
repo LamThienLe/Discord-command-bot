@@ -72,20 +72,29 @@ class MCPClient:
         if not _env_bool("USE_MCP", False):
             raise NotUsingMCPError("USE_MCP is false")
         await self._ensure()
-        # Structured log (redact values, show keys and simple scalars)
-        args_summary = {
-            k: (v if isinstance(v, (int, float, bool)) else (str(v)[:64] if isinstance(v, str) else type(v).__name__))
-            for k, v in params.items()
-        }
-        self._logger.info("tool_call_start", extra={"tool_name": name, "tool_args": args_summary})
+        # Structured log: include full JSON for visibility when running python -m app.main
+        try:
+            # Include JSON directly in message for visibility in default logs
+            self._logger.info(f"tool_call_start {name} {json.dumps(params)}")
+        except Exception:
+            # Fallback: compact summary
+            args_summary = {
+                k: (v if isinstance(v, (int, float, bool)) else (str(v)[:64] if isinstance(v, str) else type(v).__name__))
+                for k, v in params.items()
+            }
+            self._logger.info("tool_call_start", extra={"tool_name": name, "tool_args": args_summary})
         try:
             t0 = time.time()
             result = await _rpc_call(self._proc, "tools/call", {"name": name, "arguments": params})
             duration_ms = int((time.time() - t0) * 1000)
-            res_summary = (
-                result if isinstance(result, (int, float, bool)) else (str(result)[:120] if isinstance(result, str) else type(result).__name__)
-            )
-            self._logger.info("tool_call_end", extra={"tool_name": name, "duration_ms": duration_ms, "result": res_summary})
+            try:
+                serialized = json.dumps(result) if not isinstance(result, str) else result[:2000]
+                self._logger.info(f"tool_call_end {name} {duration_ms}ms {serialized}")
+            except Exception:
+                res_summary = (
+                    result if isinstance(result, (int, float, bool)) else (str(result)[:120] if isinstance(result, str) else type(result).__name__)
+                )
+                self._logger.info("tool_call_end", extra={"tool_name": name, "duration_ms": duration_ms, "result": res_summary})
             return result
         except Exception as e:
             self._logger.error("tool_call_error", extra={"tool_name": name, "error": str(e)[:200]})
