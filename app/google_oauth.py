@@ -7,7 +7,10 @@ from google.oauth2.credentials import Credentials
 TOKENS_DIR = Path(__file__).resolve().parent / "tokens"
 TOKENS_DIR.mkdir(exist_ok=True)
 
-SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
+SCOPES = [
+    "https://www.googleapis.com/auth/calendar.events",
+    "https://www.googleapis.com/auth/calendar.readonly",
+]
 
 def _token_path(discord_user_id: int) -> Path:
     return TOKENS_DIR / f"{discord_user_id}.json"

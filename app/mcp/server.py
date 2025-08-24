@@ -32,7 +32,7 @@ def _summarize_sources(sources: List[str]) -> List[str]:
 
 # Simple server-side allowlist: caller -> allowed tools
 _ALLOWLIST: Dict[str, Set[str]] = {
-    "personal": {"create_event"},
+    "personal": {"create_event", "propose_slots", "list_today"},
     "command": {"search_docs"},
 }
 
@@ -97,9 +97,160 @@ async def search_docs(query: str, caller: str = "") -> Dict[str, Any]:
     text_norm = text_norm[:3800]
     return {"content": text_norm, "sources": _summarize_sources(sources or [])}
 
+def _format_time_local(d: dt.datetime, tz: dt.tzinfo) -> str:
+    return d.astimezone(tz).strftime("%H:%M")
+
+
+async def list_today(user_id: int, caller: str = "") -> str:
+    _enforce_caller(caller, "list_today")
+    creds = get_user_credentials(user_id)
+    if not creds:
+        raise RuntimeError("Missing Google credentials. Use /connect_google.")
+    client = GoogleCalendarClient(creds)
+    user_tz_name = client.get_user_timezone() or "Asia/Ho_Chi_Minh"
+    try:
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo(user_tz_name)
+    except Exception:
+        tz = dt.timezone.utc
+
+    # Query events from local midnight to end of day
+    now_local = dt.datetime.now(tz)
+    start_local = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_local = start_local.replace(hour=23, minute=59, second=59, microsecond=0)
+
+    service = client.service
+    events_result = (
+        service.events()
+        .list(
+            calendarId="primary",
+            timeMin=start_local.astimezone(dt.timezone.utc).isoformat(),
+            timeMax=end_local.astimezone(dt.timezone.utc).isoformat(),
+            singleEvents=True,
+            orderBy="startTime",
+        )
+        .execute()
+    )
+    items = events_result.get("items", []) if isinstance(events_result, dict) else []
+
+    if not items:
+        return "No events today."
+
+    lines: List[str] = []
+    for ev in items:
+        if not isinstance(ev, dict):
+            continue
+        summary = str(ev.get("summary") or "(no title)")
+        start_raw = (ev.get("start") or {}).get("dateTime") or (ev.get("start") or {}).get("date")
+        end_raw = (ev.get("end") or {}).get("dateTime") or (ev.get("end") or {}).get("date")
+        try:
+            if isinstance(start_raw, str) and len(start_raw) > 10:
+                st = dt.datetime.fromisoformat(start_raw)
+                en = dt.datetime.fromisoformat(str(end_raw)) if isinstance(end_raw, str) else st
+                line = f"{_format_time_local(st, tz)}–{_format_time_local(en, tz)}  {summary}"
+            else:
+                # All-day
+                line = f"All day  {summary}"
+        except Exception:
+            line = summary
+        lines.append(line)
+        if len(lines) >= 20:
+            break
+    return "\n".join(lines)
+
+
+async def propose_slots(user_id: int, minutes: int = 30, count: int = 3, caller: str = "") -> str:
+    _enforce_caller(caller, "propose_slots")
+    if minutes <= 0:
+        minutes = 30
+    if count <= 0:
+        count = 3
+    creds = get_user_credentials(user_id)
+    if not creds:
+        raise RuntimeError("Missing Google credentials. Use /connect_google.")
+    client = GoogleCalendarClient(creds)
+    user_tz_name = client.get_user_timezone() or "Asia/Ho_Chi_Minh"
+    try:
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo(user_tz_name)
+    except Exception:
+        tz = dt.timezone.utc
+
+    service = client.service
+    now_utc = dt.datetime.now(dt.timezone.utc)
+    horizon_utc = now_utc + dt.timedelta(days=3)
+    body = {
+        "timeMin": now_utc.isoformat(),
+        "timeMax": horizon_utc.isoformat(),
+        "timeZone": user_tz_name,
+        "items": [{"id": "primary"}],
+    }
+    fb = service.freebusy().query(body=body).execute()
+    busy = []
+    try:
+        busy_list = ((fb.get("calendars") or {}).get("primary") or {}).get("busy") or []
+        for b in busy_list:
+            s = b.get("start")
+            e = b.get("end")
+            if isinstance(s, str) and isinstance(e, str):
+                bs = dt.datetime.fromisoformat(s)
+                be = dt.datetime.fromisoformat(e)
+                if bs.tzinfo is None:
+                    bs = bs.replace(tzinfo=dt.timezone.utc)
+                if be.tzinfo is None:
+                    be = be.replace(tzinfo=dt.timezone.utc)
+                busy.append((bs.astimezone(dt.timezone.utc), be.astimezone(dt.timezone.utc)))
+    except Exception:
+        busy = []
+
+    # Generate candidate slots within local work hours 09:00–18:00
+    slots: List[str] = []
+    step = dt.timedelta(minutes=minutes)
+    cur_local = dt.datetime.now(tz)
+
+    def _day_bounds(dlocal: dt.datetime) -> tuple[dt.datetime, dt.datetime]:
+        start = dlocal.replace(hour=9, minute=0, second=0, microsecond=0)
+        end = dlocal.replace(hour=18, minute=0, second=0, microsecond=0)
+        return start, end
+
+    cur_local = max(cur_local, _day_bounds(cur_local)[0])
+    while len(slots) < count and cur_local.astimezone(dt.timezone.utc) < horizon_utc:
+        day_start, day_end = _day_bounds(cur_local)
+        if cur_local >= day_end:
+            # move to next day start
+            cur_local = (day_start + dt.timedelta(days=1)).replace(hour=9, minute=0)
+            continue
+        candidate_start_utc = cur_local.astimezone(dt.timezone.utc)
+        candidate_end_utc = (cur_local + step).astimezone(dt.timezone.utc)
+        if candidate_end_utc > day_end.astimezone(dt.timezone.utc):
+            # jump to next day
+            cur_local = (day_start + dt.timedelta(days=1)).replace(hour=9, minute=0)
+            continue
+
+        conflict = False
+        for bs, be in busy:
+            if not (candidate_end_utc <= bs or candidate_start_utc >= be):
+                # overlap
+                conflict = True
+                # jump to end of busy block in local tz
+                cur_local = be.astimezone(tz)
+                break
+        if conflict:
+            continue
+        # accept slot
+        slots.append(f"{cur_local.strftime('%Y-%m-%d')} {cur_local.strftime('%H:%M')}–{(cur_local + step).strftime('%H:%M')} ({user_tz_name})")
+        cur_local = cur_local + step
+
+    if not slots:
+        return "No free slots in the next 3 days during work hours."
+    return "\n".join(slots[:count])
+
+
 TOOLS: Dict[str, Any] = {
     "create_event": create_event,
     "search_docs": search_docs,
+    "list_today": list_today,
+    "propose_slots": propose_slots,
 }
 
 
