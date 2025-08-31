@@ -1,75 +1,153 @@
-# Command Help Bot - Discord Version
+# WhatsApp Bot - Discord Version
 
-An AI-powered Discord bot that helps users learn about commands and tools using OpenAI and FireCrawl.
+An AI-powered Discord bot that helps you manage tasks, schedule events, and get help with commands using natural language.
 
-## Features
+## What This Bot Does
 
-- **Discord Integration**: Easy-to-use Discord bot with slash commands
-- **AI-Powered Help**: Get explanations for commands and tools using GPT-4o-mini
-- **Documentation Scraping**: Automatically fetches documentation using FireCrawl
-- **Smart Caching**: Common commands are cached for instant responses
-- **Rich Embeds**: Formatted Discord embeds with syntax highlighting
+- **Task Management**: Create and organize your tasks with simple commands
+- **Calendar Events**: Schedule meetings and events automatically
+- **Command Help**: Get explanations for any command or tool
+- **Smart Reminders**: Never forget important tasks
+- **Easy to Use**: Just type what you want in plain English
 
-## Supported Commands
+## New Features - Task Management
 
-### /help [query]
-Get help with any command or tool. Examples:
-- `/help grep` - Learn about the grep command
-- `/help tar` - Learn how to use tar
-- `/help docker` - Learn Docker basics
-- `/help git commit` - Learn about git commit
+### Creating Tasks
 
-## Setup Instructions
+Use `/task` to create tasks with natural language:
 
-### 1. Create a Discord Bot
+**Basic Examples:**
+```
+/task Buy groceries tomorrow at 5pm
+/task Call mom this weekend
+/task Review quarterly report by Friday
+/task Clean desk #organization
+```
+
+**With Priority:**
+```
+/task Urgent: Fix server issue #work #critical
+/task Important presentation prep #work #high
+/task Low priority: Organize desk #personal
+```
+
+**With Tags (use #):**
+```
+/task Buy groceries #shopping #personal
+/task Review code #work #development #urgent
+/task Schedule dentist #health #appointment
+```
+
+### How Task Creation Works
+
+The bot automatically:
+- **Extracts the task title** from your message
+- **Detects priority** from keywords like "urgent", "important", "low"
+- **Finds due dates** from phrases like "tomorrow", "next week", "3pm"
+- **Creates tags** from words starting with #
+- **Sets default priority** to "medium" if not specified
+
+### Managing Your Tasks
+
+**View your tasks:**
+```
+/tasks                    # Shows all pending tasks
+/tasks pending           # Shows pending tasks only
+/tasks completed         # Shows completed tasks
+/tasks in_progress       # Shows tasks you're working on
+```
+
+**Complete a task:**
+```
+/complete 123            # Marks task #123 as done
+```
+
+### Task Properties
+
+Each task has:
+- **Title**: What you need to do (auto-generated from your message)
+- **Description**: Your full message
+- **Due Date**: When it's due (if you mentioned a time)
+- **Priority**: Low, Medium, High, or Urgent
+- **Status**: Pending, In Progress, Completed, or Cancelled
+- **Tags**: For organizing tasks (like #work, #personal)
+
+## All Available Commands
+
+### Task Commands
+- `/task <description>` - Create a new task
+- `/tasks [status]` - List your tasks (pending/completed/in_progress)
+- `/complete <task_id>` - Mark a task as completed
+
+### Calendar Commands
+- `/ask_personal <description>` - Schedule a calendar event
+- `/set_timezone <timezone>` - Set your timezone (e.g., Asia/Ho_Chi_Minh)
+
+### Help Commands
+- `/help <query>` - Get help with commands and tools
+- `/stats` - See your usage statistics
+- `/system` - System analytics (admin only)
+
+## Step-by-Step Setup Guide
+
+### Step 1: Create a Discord Bot
 
 1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
 2. Click "New Application"
-3. Give your bot a name
+3. Give your bot a name (like "My Task Bot")
 4. Go to the "Bot" section
 5. Click "Add Bot"
-6. Copy the **Bot Token** (you'll need this for the .env file)
+6. Copy the **Bot Token** (you'll need this later)
 
-### 2. Get API Keys
+### Step 2: Get API Keys
 
-1. **OpenAI API Key**: Get from [platform.openai.com](https://platform.openai.com)
-2. **FireCrawl API Key**: Get from [firecrawl.com](https://firecrawl.com)
+1. **OpenAI API Key**: 
+   - Go to [platform.openai.com](https://platform.openai.com)
+   - Sign up or log in
+   - Go to API Keys section
+   - Create a new key
 
-### 3. Configure Environment
+2. **FireCrawl API Key**: 
+   - Go to [firecrawl.com](https://firecrawl.com)
+   - Sign up for an account
+   - Get your API key
 
-1. Copy the example environment file:
+### Step 3: Set Up Your Project
+
+1. **Create environment file:**
    ```bash
    cp discord_env_example.txt .env
    ```
 
-2. Edit `.env` and fill in your tokens:
+2. **Edit the .env file** with your tokens:
    ```bash
    DISCORD_BOT_TOKEN=your_bot_token_here
    OPENAI_API_KEY=your_openai_api_key_here
    FIRECRAWL_API_KEY=your_firecrawl_api_key_here
+   USE_MCP=true
+   DRY_RUN=false
    ```
 
-### 4. Install Dependencies
+3. **Install Python dependencies:**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
 
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-```
+### Step 4: Run the Bot
 
-### 5. Run the MCP server
+1. **Start the MCP server** (in one terminal):
+   ```bash
+   python -m app.mcp.server
+   ```
 
-```bash
-python -m app.mcp.server
-```
+2. **Start the bot** (in another terminal):
+   ```bash
+   USE_MCP=true python -m app.main
+   ```
 
-### 6. Run the Bot
-
-```bash
-USE_MCP=true python -m app.main
-```
-
-### 7. Invite Bot to Your Server
+### Step 5: Add Bot to Your Server
 
 1. In Discord Developer Portal, go to "OAuth2" → "URL Generator"
 2. Select "bot" scope
@@ -80,137 +158,130 @@ USE_MCP=true python -m app.main
 4. Copy the generated URL and open it in your browser
 5. Select your Discord server and click "Authorize"
 
-## Usage
+## How to Use - Simple Examples
 
-Once the bot is running and invited to your server:
+### Creating Your First Task
 
-1. Type `/help` followed by a command or tool name
-2. The bot will either:
-   - Return a cached response (instant)
-   - Fetch documentation and generate an AI response (takes a few seconds)
+1. Type: `/task Buy milk tomorrow`
+2. The bot will create a task with:
+   - Title: "Buy Milk"
+   - Due Date: Tomorrow
+   - Priority: Medium
+   - Status: Pending
 
-### Examples
+### Scheduling a Meeting
 
-```
-/help grep
-/help how to unzip files
-/help docker run
-/help git status
-```
+1. Type: `/ask_personal Team meeting tomorrow 3pm for 1 hour`
+2. The bot will:
+   - Create a calendar event
+   - Send you a link to the event
+   - Add it to your Google Calendar (if connected)
 
-You can also create calendar events (placeholder OAuth required):
+### Getting Help
 
-```
-/ask_personal "tomorrow 3pm for 1h Team sync"
-```
+1. Type: `/help git commit`
+2. The bot will:
+   - Search for git commit documentation
+   - Give you a clear explanation
+   - Show you examples
 
-Note: Google account connection is required for event creation once OAuth is implemented. Use `/connect_google` (placeholder for now).
+### Checking Your Tasks
 
-## MCP quick start
+1. Type: `/tasks`
+2. The bot will show you all your pending tasks with:
+   - Task ID
+   - Title
+   - Due date
+   - Priority
+   - Tags
 
-Minimal MCP integration powers two tools and unified commands.
+### Completing a Task
 
-### Install and run
+1. Type: `/complete 1` (where 1 is the task ID)
+2. The bot will mark that task as completed
 
-```bash
-pip install -r requirements.txt
-python -m app.mcp.server  # starts stdio server
-```
+## Tips for Best Results
 
-Set feature flags in `.env`:
+### Task Creation Tips
+- **Be specific with times**: "3pm" is better than "later"
+- **Use tags for organization**: `#work`, `#personal`, `#urgent`
+- **Set priorities**: Use words like "urgent", "important", "low"
+- **Include context**: "Call mom about dinner plans" is better than just "Call mom"
 
-```bash
-USE_MCP=true   # enable MCP (required for specialists)
-DRY_RUN=false  # when true, specialists print intended calls without side effects
-```
+### Time Examples
+- "tomorrow" = tomorrow
+- "next week" = next week
+- "3pm" = today at 3pm
+- "Friday 2pm" = Friday at 2pm
+- "in 2 hours" = 2 hours from now
 
-Run the bot:
+### Priority Keywords
+- **Urgent**: "urgent", "asap", "emergency", "critical"
+- **High**: "important", "high", "priority"
+- **Low**: "low", "whenever", "sometime"
+- **Medium**: everything else
 
-```bash
-USE_MCP=true python -m app.main
-```
+## Advanced Features
 
-### Commands
+### Analytics and Monitoring
+- **Rate Limiting**: Prevents API overuse
+- **Caching**: Speeds up common requests
+- **Error Recovery**: Automatic retry with backoff
+- **Usage Metrics**: Track command usage and performance
 
-- `/help <query>`: uses CommandSpecialist via MCP `search_docs` to answer, with sources.
-- `/ask_personal <text>`: parses time (default timezone `Asia/Ho_Chi_Minh`), creates a Google Calendar event via MCP `create_event`. If no time found, it asks for one.
+### Natural Language Processing
+- **Intent Classification**: Understands what you want to do
+- **Smart Routing**: Sends requests to the right specialist
+- **Conversation Handling**: Responds naturally to greetings and thanks
 
-### Dry run
+### WhatsApp Integration (Coming Soon)
+- Send messages via WhatsApp Business API
+- Interactive buttons and quick replies
+- Webhook handling for incoming messages
 
-Set `DRY_RUN=true` to preview calls:
+## MCP Architecture
 
+The bot uses Model Context Protocol (MCP) for clean specialist separation:
+
+### Specialists
+- **PersonalSpecialist**: Handles calendar events and scheduling
+- **CommandSpecialist**: Provides help with commands and tools
+- **NLPSpecialist**: Routes requests based on intent
+- **AnalyticsSpecialist**: Provides usage statistics
+
+### MCP Tools
+- `create_event(user_id, summary, start_iso, end_iso)` - Create calendar events
+- `search_docs(query)` - Search documentation
+- `list_today(user_id)` - List today's calendar events
+- `propose_slots(user_id, minutes, count)` - Find free time slots
+
+### Dry Run Mode
+Set `DRY_RUN=true` to preview calls without side effects:
 ```
 /ask_personal team sync tomorrow 3pm for 45m
 → DRY_RUN create_event {"user_id": 123, "summary": "Team Sync", "start_iso": "...", "end_iso": "..."}
-
-/help how to use curl PUT
-→ DRY_RUN search_docs {"query": "how to use curl PUT"}
-```
-
-### Tools (MCP)
-
-- `create_event(user_id:int, summary:str, start_iso:str, end_iso:str) -> str`
-- `search_docs(query:str) -> {content:str, sources:list[str]}`
-
-Errors are concise and actionable (e.g., missing Google credentials). MCP server enforces per-specialist tool allowlists.
-
-## How It Works
-
-1. **Docs Fetching**: uses FireCrawl to fetch relevant docs for the query
-2. **Synthesis**: MCP server synthesizes a concise answer (or extracts snippets)
-3. **Discord Response**: Bot formats the response as an embed with sources
-
-## File Structure
-
-```
-app/
-├── __init__.py
-├── main.py              # Bot entry point
-├── discord_bot.py       # Discord bot logic
-├── config.py           # Configuration management
-├── tools/firecrawl_client.py  # FireCrawl API client
-├── services/context.py        # Context aggregation
-└── services/llm.py            # Local LLM (Ollama) helper
-
-requirements.txt         # Python dependencies
-discord_env_example.txt  # Environment variables template
-```
-
-## Customization
-
-### Adding More Cached Commands
-
-Edit `app/cache.py` to add more pre-defined command explanations:
-
-```python
-COMMON_ANSWERS = {
-    "new_command": (
-        "Explanation: Brief description of what the command does.\n\n"
-        "Syntax:\n```\nnew_command [OPTIONS] ARGUMENTS\n```\n\n"
-        "Example:\n```\nnew_command --help\n```"
-    ),
-    # Add more commands here
-}
-```
-
-### Changing the AI Model
-
-Edit `app/agent.py` to use a different OpenAI model:
-
-```python
-# Change this line in generate_structured_answer()
-payload = {
-    "model": "gpt-4",  # or "gpt-3.5-turbo"
-    # ... rest of payload
-}
 ```
 
 ## Troubleshooting
 
 ### Bot Not Responding
 - Check if the bot is online in your Discord server
-- Verify the bot token in `.env` is correct
+- Make sure both the MCP server and bot are running
 - Check the console for error messages
+
+### Tasks Show "Untitled"
+- Make sure you're using the latest version of the code
+- Try being more specific: "Buy groceries" instead of just "groceries"
+
+### Can't Create Calendar Events
+- You need to connect your Google account first
+- Use `/connect_google` (coming soon)
+- For now, use `/task` for reminders
+
+### Commands Not Working
+- Make sure you typed the command correctly (with the `/`)
+- Check that the bot has the right permissions
+- Try restarting the bot
 
 ### API Errors
 - Verify your OpenAI API key has credits
@@ -221,6 +292,63 @@ payload = {
 - Make sure the bot has "Send Messages" permission in the channel
 - Check that slash commands are enabled for the bot
 
+## File Structure
+
+```
+app/
+├── main.py                    # Bot entry point
+├── cogs/discord_bot.py        # Discord commands
+├── agents/specialists.py      # AI specialists (Personal, Command, NLP, Analytics)
+├── tools/
+│   ├── task_manager.py        # Task management system
+│   ├── google_calendar.py     # Google Calendar integration
+│   └── firecrawl_client.py    # Documentation scraping
+├── services/
+│   ├── mcp_client.py          # MCP client with retry logic
+│   ├── metrics.py             # Usage analytics
+│   ├── cache.py               # Response caching
+│   ├── context.py             # Context aggregation
+│   ├── llm.py                 # Local LLM helper
+│   └── whatsapp_client.py     # WhatsApp integration
+├── mcp/server.py              # MCP server
+├── utils/timeparse.py         # Time parsing utilities
+├── config.py                  # Configuration management
+├── user_settings.py           # User preferences
+└── google_oauth.py            # Google OAuth helper
+```
+
+## What's Next
+
+The bot is designed to grow with your needs. Future features might include:
+- **WhatsApp Integration**: Full WhatsApp Business API support
+- **Team Collaboration**: Shared tasks and calendars
+- **Advanced Automation**: Smart reminders and workflow automation
+- **Multi-platform**: Slack, Microsoft Teams integration
+- **Voice Commands**: Voice-to-task conversion
+- **AI Learning**: Personalized suggestions based on usage
+
+## Development
+
+### Adding New Features
+1. Create new specialists in `app/agents/specialists.py`
+2. Add MCP tools in `app/mcp/server.py`
+3. Update Discord commands in `app/cogs/discord_bot.py`
+4. Use the metrics system for monitoring
+
+### Testing
+- Use `DRY_RUN=true` for safe testing
+- Check logs for detailed debugging
+- Use `/stats` and `/system` for monitoring
+
+## Need Help?
+
+If you're having trouble:
+1. Check the console for error messages
+2. Make sure all API keys are correct
+3. Verify the bot has the right permissions
+4. Try restarting both the MCP server and bot
+5. Use `DRY_RUN=true` to debug issues
+
 ## License
 
-This project is open source. Feel free to modify and distribute.
+This project is open source. Feel free to modify and share!

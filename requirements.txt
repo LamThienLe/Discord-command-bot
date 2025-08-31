@@ -6,3 +6,4 @@ google-auth
 google-auth-oauthlib
 dateparser
 mcp
+backoff==2.2.1
